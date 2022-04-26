@@ -1,0 +1,26 @@
+html {
+    font-size: 10px;
+}
+
+.gameboard {
+    width: 600px;
+    height: 600px;
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    grid-template-rows: repeat(3,1fr);
+    row-gap: 0.5rem;
+    column-gap: 0.5rem;
+    background-color: rgb(216, 216, 216);
+}
+
+.game-square {
+    background-color: rgb(255,255,255);
+    justify-self: stretch;
+    display: flex;
+}
+
+.game-square p {
+    flex: 1;
+    justify-content: center;
+    align-items: center;
+}
