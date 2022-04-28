@@ -1,29 +1,75 @@
 //Gameboard Object w/ gameboard array stored inside (object module)
 const gameBoard = (() => {
-    const _newBoard = [["","",""],["","",""],["","",""]];
-    const _newMoves = [];
     const gameSquaresAll = document.querySelectorAll(".game-square");
     const players = [];
-    let board = [];
+    const board = [["","",""],["","",""],["","",""]];
     let _playOn = true;
     let _playerCurrent = 0;
-    let moves = [];
+    let _moves = [];
 
-    const resetBoard = function() {
-        board = _newBoard;
-        //console.log(board);
+    const returnCurrentPlayer = function() {
+        return _playerCurrent;
     }
 
-    const createBoardELs = function() {
-        //creates event listeners to created div square elements
-        gameSquaresAll.forEach(square => {
-            square.addEventListener("click",gamePlay.oneTurn);
-            console.log("ELs added.")
-        })
+    const resetBoard = function() {
+        _clearBoardArr();
+        _clearArr(_moves);
+        _clearArr(players);
+        _playOn = true;
+        _playerCurrent = 0;
+        _updateBoardDisplay();
+    }
+
+    const restartBoard = function() {
+        _togglePlayer();// switches player starting
+        _toggleMkr(players[0]);//switches marker so starting player has "X" marker
+        _toggleMkr(players[1]);
+        _clearBoardArr();
+        _clearArr(_moves);
+        _playOn = true;
+        _updateBoardDisplay();
+    }
+
+    const _clearBoardArr = function() {
+    //removes all content in board array
+        for (i=0;i<3;i++) {
+            for (j=0;j<3;j++) {
+                board[i][j] = "";
+            }
+        }
+    }
+
+    const _clearArr = function(array) {
+    //removes all content in array 
+        while (array.length > 0) {
+            array.pop();
+        }
+    }
+
+    const updateBoardELs = function(action) {
+    //creates or removes event listeners to created div square elements per action string input
+        switch (action) {
+            case "create": {
+                gameSquaresAll.forEach(square => {
+                    square.addEventListener("click",gamePlay.oneTurn);
+                })
+                //adds event listener for restart button once game over
+                restartGameBtn.removeEventListener("click",gamePlay.restartGame); //might cause error if not already created
+                break;
+            }
+            case "delete": {
+                gameSquaresAll.forEach(square => {
+                    square.removeEventListener("click",gamePlay.oneTurn);
+                })
+                //adds event listener for restart button once game over
+                restartGameBtn.addEventListener("click",gamePlay.restartGame);
+                break;
+            }
+        }
     }
 
     const _updateBoardDisplay = () => {
-        //updates board element text content & sets up event listeners in divs
+    //updates text content of all square div elements on the board
         gameSquaresAll.forEach(square => {
             let tempIndex = square.id.split("-")[1];
             square.textContent = board[tempIndex[0]][tempIndex[1]];
@@ -31,57 +77,76 @@ const gameBoard = (() => {
     }
 
     const addMarkerToBoard = (e) => {
+    //checks if square available, adds marker to board array, updates display elements, toggles to next player
         let selectedIndex = e.srcElement.id.split("-")[1];
-        moves.push(selectedIndex);
-        console.log(moves);
         if (board[selectedIndex[0]][selectedIndex[1]].length === 0) {
-            //if square available places marker
+        //if square is available adds marker to board
             board[selectedIndex[0]][selectedIndex[1]] = players[_playerCurrent].mkr;
-            _togglePlayer();
-            _updateBoardDisplay();
-            //check if last move ends game and calls function to end it if it does
-            if (!checkWinner()) {
-                gamePlay.endGame();
-            }
+            _moves.push(selectedIndex); //stores all moves in array, checked for draw situation
+            _updateBoardDisplay(); //updates text content of all divs per board array
+            //toggle player was here before removed
+            return true; //if marker was added to board
         } else { 
-            commDisplay.textContent = "That square is already taken, please select another.";
+            return false;
+        }
+    }
+
+    const updateScore = (result) => {
+    //updates score board in case players want to continue playing, no functionality to display score yet
+        switch (result) {
+            case "w":
+                players[_playerCurrent].score[0] += 1;//adds win to current player
+                if (_playerCurrent === 0) { //adds loss to other player
+                    players[1].score[1] += 1;
+                } else {
+                    players[0].score[1] += 1;
+                }
+                break;
+            case "d":
+                //both players get draw
+                players[0].score[2] += 1;
+                players[1].score[2] += 1;
+                break;
         }
     }
 
     const checkWinner = function() {
-        //check rows and columns
+        //checks rows and columns
         if (_playOn) {
             for (i=0;i<3;i++) {
                 if (board[i][0] === board[i][1]  && board[i][1] === board[i][2] && board[i][2].length != 0) {
                     _playOn = false;
-                    console.log(`row ${i} winner`);
+                    return "w";
                 } else if (board[0][i] === board[1][i]  && board[1][i] === board[2][i] && board[2][i].length != 0) {
                     _playOn = false;
-                    console.log(`row ${i} winner`);
+                    return "w";
                 }
             }
         }
-        //check diagonals
+        //checks diagonals
         if (_playOn) {
             for (i=0;i<3;i++) {
                 if (board[0][0] === board[1][1]  && board[1][1] === board[2][2] && board[2][2].length != 0) {
                     _playOn = false;
-                    console.log(`diagonal top to bottom winner`);
+                    return "w";
                 } else if (board[2][0] === board[1][1]  && board[1][1] === board[0][2] && board[0][2].length != 0) {
                     _playOn = false;
-                    console.log(`diagonal bottom to top winner`);
+                    return "w";
                 }
             }
         }
-
-        //check for all squares filled 
-        if (moves.length === 9) {
-            _playOn = false;
-            console.log(`All squares taken, no winner`);
+        //checks for all squares filled 
+        if (_playOn) {
+            if (_moves.length === 9) {
+                _playOn = false;
+                return "d";
+            }
         }
-        console.log(`Play on = ${_playOn}`);
-        console.log(board);
-        return(_playOn);
+
+        if (_playOn) {// if no winners return conditon to continue playing "p"
+            _togglePlayer();
+            return "p";
+        }
     }
 
     const _togglePlayer = () => {
@@ -90,66 +155,95 @@ const gameBoard = (() => {
         } else {
             _playerCurrent = 0;
         }
-        commDisplay.textContent = `${players[_playerCurrent].name} it is now your turn. Please select a square.`;
+    }
+    const _toggleMkr = function(selectedPlayer) {
+        if (selectedPlayer.mkr === "X") {
+            selectedPlayer.mkr = "O";
+        } else {
+            selectedPlayer.mkr = "X";
+        }
     }
 
-    return {board, players, resetBoard, createBoardELs, addMarkerToBoard, checkWinner};
+    return {board, players, returnCurrentPlayer, resetBoard, restartBoard, updateBoardELs, addMarkerToBoard, checkWinner, updateScore};
 })();
 
 
 //Player Objects (object factories)
-const playerFactory = (var1) => {
-    const name = var1;
-    const moves = [];
-    const assignMkr = () => {
+const playerFactory = (name) => {
+    name = name;
+    score = [0,0,0] //[W,L,D]
+    _assignMkr = function() {
+        //assigns marker per order players are entered into the array gameBoard.players
         if (gameBoard.players.length === 0) {
-            return "X";
+            return "X"; //player 1 if no players added yet 
         } else if (gameBoard.players.length === 1) {
-            return "O";
+            return "O"; //player 2 if player already added
         }
     }
-    const mkr = assignMkr();
-    const _method2 = () => {
-        console.log(var1);
-    }
-    return {name, assignMkr, mkr, moves}
+    mkr = _assignMkr(); //might cause issue reassigning value b/c not using let to create??
+    return {name, mkr, score}
 };
 
 
-
-//Gameflow/Data Object (object module)
+//GAMEPLAY MODULE 
 const gamePlay = (() => {
-    const var1 = "hi";
-    const _var2 = "Hello";
     const startGame = () => {
+        //reset variables if carryover from last game 
+        gameBoard.resetBoard();
         //assign players
-        let player1 = playerFactory(prompt("Player 1, please enter your name?"));
+        let player1 = playerFactory(prompt("Player 1, please enter your name.","Joe"));
         gameBoard.players[0] = player1;
-        let player2 = playerFactory(prompt("Player 2, please enter your name?"));
+        let player2 = playerFactory(prompt("Player 2, please enter your name.","Jim"));
         gameBoard.players[1] = player2;
         //give instructions on next move
-        commDisplay.textContent = "Good Luck to both players, Player 1 your are X and you have the first turn. Please selecrt a square to place your marker."
+        commDisplay.textContent = `Good Luck, ${player1.name} you are X. Please select a square.`
         // Sets gameboard and event listeners for squares
-        gameBoard.resetBoard();
-        gameBoard.createBoardELs();
+        gameBoard.updateBoardELs("create");
     }
     const oneTurn = (e) => {
-        console.log("Next turn started")
         //add marker to board 
-        gameBoard.addMarkerToBoard(e);
+        if(gameBoard.addMarkerToBoard(e)) {
+        //if square not taken, adds it to board check for winner
+            switch (gameBoard.checkWinner()) {
+                case "p":
+                    commDisplay.textContent = `${gameBoard.players[gameBoard.returnCurrentPlayer()].name} it is your turn. Please select a square.`; 
+                    break;
+                case "w":
+                    commDisplay.textContent = `${gameBoard.players[gameBoard.returnCurrentPlayer()].name} Wins!`;
+                    gameBoard.updateScore("w");
+                    gameBoard.updateBoardELs("delete");//turns off square ELs and creates restart button EL
+                    break;
+                case "d":
+                    commDisplay.textContent = `Game ends in a draw.`
+                    gameBoard.updateScore("d");
+                    gameBoard.updateBoardELs("delete"); //turns off square ELs and creates restart button EL
+                    break;
+            }
+        } else {
+            commDisplay.textContent = "That square is already taken, please select another.";
+        }
     }
-    const endGame = function() {
-        commDisplay.textContent = "Game Over, Player XX wins!"
-        console.log("Game Over");
+    const restartGame = function() {
+        //reset variables
+        gameBoard.restartBoard(); 
+        gameBoard.updateBoardELs("create");
+
+        commDisplay.textContent = `Good Luck, ${gameBoard.players[gameBoard.returnCurrentPlayer()].name} you are X. Please select a square.`;
     }
-    return {var1, startGame, oneTurn, endGame};
+    return {startGame, oneTurn, restartGame};
 })();
 
 //Event Listeners 
 const newGameBtn = document.querySelector(".new-game-btn");
+const restartGameBtn = document.querySelector(".restart-game-btn");
 const commDisplay = document.querySelector(".gameplay-communication");
 const gameBoardDiv = document.querySelector(".gameboard");
 newGameBtn.addEventListener("click",gamePlay.startGame);
 
+
+// updated logics of ending game
+//added notes for readability of gameplay logic
+//added stalemate function and scoring 
+//added functionality to play game with same players
 
 
